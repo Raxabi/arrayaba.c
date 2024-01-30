@@ -4,7 +4,7 @@ LIB_DIR   = ./lib
 BUILD_DIR = ./build
 
 # compiler
-CC     = /sbin/gcc
+CC     = gcc
 CFLAGS = -g
 
 # informational variables
@@ -12,9 +12,9 @@ VERSION = 1.0.0
 
 # dependecies for the final build
 DEPS     = main.c arrayaba/arrayaba.c
-objects  = out/main.o out/arrayaba.o
 LIB_NAME = arrayaba.so.$(VERSION)
 
+# Change the value of this var to change the final location of the shared library
 STANDARD_LOCATION_LIB = /usr/lib/$(LIB_NAME)
 
 ### RULES TO BUILD NECCESARY FILES (library files, object files, etc) ###
@@ -32,43 +32,47 @@ $(OUT_DIR)/%.o: %.c
 
 # builds the shared library
 $(LIB_DIR)/$(LIB_NAME): out/arrayaba.o
-	$(CC) $< -shared -fPIC -o $(LIB_DIR)/$(LIB_NAME)
+	$(CC) $< -shared -fPIC -o $@
 
 # builds the executable program
 $(BUILD_DIR)/test.out: out/main.o
 	$(CC) $< -o $@ -l:$(LIB_NAME)
 
 ### RULES THAT RUN THE 'RULE BUILDERS' (above rules that produce's the necessary files) ###
-# build the executable file "test.out" within the corresponding object files and shared library
-assemble: $(BUILD_DIR)/test.out
 
 # build only the objects files
-object: out/main.o out/arrayaba.o
+objects: out/main.o out/arrayaba.o
 
 # builds the library and the object files
 library: $(LIB_DIR)/$(LIB_NAME)
 
+# build the executable file "test.out" within the corresponding object files and shared library
+assemble: $(BUILD_DIR)/test.out
+
+
 ### POST-CODE TREATMENT ###
+
+copylib:
+	cp $(LIB_DIR)/$(LIB_NAME) $(STANDARD_LOCATION_LIB)
 
 # clean the standard (std) locations where the linker search for libraries
 stdclean:
-	rm -v /usr/lib/$(LIB_NAME)
+	rm -v $(STANDARD_LOCATION_LIB)/$(LIB_NAME)
 
 # clean the local workspace of gcc produced files
 clean:
 	rm -rv $(OUT_DIR)/* $(BUILD_DIR)/* $(LIB_DIR)/*
 
-# run all the rules to get an executable program
-install:
-	cp $(LIB_DIR)/$(LIB_NAME) $(STANDARD_LOCATION_LIB)
+# produces a library and 'install' it
+install: library copylib
 
-uninstall: stdclean clean
+# removes the files produces by the compiler in the local project and $(STANDARD_LOCATION_LIB)
+uninstall: clean stdclean
 
 # produces a shared library, copying it into /usr/lib/ directory
 # and producing an executable file
 all: library install assemble
 
 # run the executable file, result of run the `assemble` or `all` rules
-run:
+test: assemble
 	./build/test.out
-
